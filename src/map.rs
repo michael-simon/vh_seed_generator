@@ -389,7 +389,10 @@ impl Map {
                             new_tiles[x + y * self.width].rotation = 3;
                         }
                         //east-west bridge
-                        (false, true, true, false) => {}
+                        (false, true, true, false) => {
+                            new_tiles[x + y * self.width].id = tile_ids[0];
+                            new_tiles[x + y * self.width].rotation = 0;
+                        }
                         //southern edge
                         (true, true, true, false) => {
                             new_tiles[x + y * self.width].id = tile_ids[1];
@@ -458,7 +461,10 @@ impl Map {
                                     new_tiles[x + y * self.width].id = tile_ids[3];
                                     new_tiles[x + y * self.width].rotation = 3;
                                 }
-                                _ => {}
+                                _ => {
+                                    new_tiles[x + y * self.width].id = tile_ids[0];
+                                    new_tiles[x + y * self.width].rotation = 0;
+                                }
                             }
                         }
                     } 
@@ -617,4 +623,93 @@ fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
     });
 
     Ok(map)
+}
+
+#[allow(non_snake_case)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Loads an overworld map dumped directly from Mednafen
+    /// Mednafen stores the RAM for the sega saturn in shorts instead of
+    /// bytes, so we have to swap the endianness of every 2 bytes
+    fn load_mednafen_map(raw_file: &[u8]) -> Map {
+        let mut tiles = Vec::with_capacity(50*50);
+
+        // Do two tiles at a time to deal with the endianness swapping
+        for i in 0..(50*50*3)/6 {
+            let tile1 = Tile {
+                id: raw_file[i*6+1],
+                rotation: raw_file[i*6+0] as i8,
+                height: raw_file[i*6+3] as i8
+            };
+
+            let tile2 = Tile {
+                id: raw_file[i*6+2],
+                rotation: raw_file[i*6+5] as i8,
+                height: raw_file[i*6+4] as i8
+            };
+
+            tiles.push(tile1);
+            tiles.push(tile2);
+        }
+
+        Map{width: 50, height: 50, tiles}
+    }
+
+    // Just a random seed I generated
+    #[test]
+    fn FNMCNTLGHF() {
+        let dumped_map = include_bytes!("../tests/FNMCNTLGHF.bin");
+
+        let mednafen_map = load_mednafen_map(dumped_map);
+        let mut generated_map = Map::from_code("FNMCNTLGHF").unwrap();
+
+        // Replace the 0xff start tile with a default tile
+        generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
+
+        assert!(mednafen_map == generated_map);
+    }
+
+    // A map that fails to place the sealed dungeon
+    #[test]
+    fn GBBBTSMMBB() {
+        let dumped_map = include_bytes!("../tests/GBBBTSMMBB.bin");
+
+        let mednafen_map = load_mednafen_map(dumped_map);
+        let mut generated_map = Map::from_code("GBBBTSMMBB").unwrap();
+
+        // Replace the 0xff start tile with a default tile
+        generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
+
+        assert!(mednafen_map == generated_map);
+    }
+
+    // A map that fails to place the volcano
+    #[test]
+    fn BBBBNDTLBB() {
+        let dumped_map = include_bytes!("../tests/BBBBNDTLBB.bin");
+
+        let mednafen_map = load_mednafen_map(dumped_map);
+        let mut generated_map = Map::from_code("BBBBNDTLBB").unwrap();
+
+        // Replace the 0xff start tile with a default tile
+        generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
+
+        assert!(mednafen_map == generated_map);
+    }
+
+    // A map that takes 7 attempts to generate
+    #[test]
+    fn QBBDGRNQBB() {
+        let dumped_map = include_bytes!("../tests/QBBDGRNQBB.bin");
+
+        let mednafen_map = load_mednafen_map(dumped_map);
+        let mut generated_map = Map::from_code("QBBDGRNQBB").unwrap();
+
+        // Replace the 0xff start tile with a default tile
+        generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
+
+        assert!(mednafen_map == generated_map);
+    }
 }
