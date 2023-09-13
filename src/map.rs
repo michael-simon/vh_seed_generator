@@ -96,7 +96,20 @@ impl Tile {
 pub struct Map {
     width : usize,
     height : usize,
-    tiles : Vec<Tile>
+    tiles : Vec<Tile>,
+    dungeons : Vec<(Tile, (usize, usize))> // dungeons array is in order of MapIds below. First is Ruins, etc.
+}
+
+#[repr(u8)]
+enum MapIds {
+    Ruins = 0x39,
+    Mansion = 0x2e,
+    Fairy = 0x36,
+    Trial = 0x33,
+    Graveyard = 0x2c,
+    Volcano = 0x35,
+    Sealed = 0x23,
+    Shop = 0x3b
 }
 
 impl Map {
@@ -144,18 +157,24 @@ impl Map {
             let mut feature_locations: Vec<(usize, usize)> = Vec::new();
 
             // Place ruins
-            if !map.place_feature(&[(0x39, 2), (0x32, 3), (0x32, 1), (0x32, 0)], 2, 2, 1, 5, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Ruins as u8, 2), (0x32, 3), (0x32, 1), (0x32, 0)], 2, 2, 1, 5, &mut feature_locations, &mut rng) {
                 //println!("Failed to place ruins in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Ruins as u8, rotation: 2, height: h }, (x, y)));
             // Place mansion
             let rand_rotation = (rng.rand_byte() & 3) as i8;
-            if !map.place_feature(&[(0x2e, rand_rotation)], 1, 1, 1, 0x25, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Mansion as u8, rand_rotation)], 1, 1, 1, 0x25, &mut feature_locations, &mut rng) {
                 //println!("Failed to place mainsion in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Mansion as u8, rotation: rand_rotation, height: h }, (x, y)));
             // Place meadow variants
             if !map.place_feature(&[(0xa, 0)], 1, 1, 2, 9, &mut feature_locations, &mut rng) {
                 //println!("Failed to place meadows1 in seed {}!", rng.get_code());
@@ -178,45 +197,64 @@ impl Map {
                 continue
             };
             // Fairy Forest
-            if !map.place_feature(&[(0x36, 0)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Fairy as u8, 0)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
                 //println!("Failed to place fairy forest in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Fairy as u8, rotation: 0, height: h }, (x, y)));
             // Place Trial Dungeon
-            if !map.place_feature(&[(0x33, 0)], 1, 1, 1, 9, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Trial as u8, 0)], 1, 1, 1, 9, &mut feature_locations, &mut rng) {
                 //println!("Failed to place trial dungeon in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
+            
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Trial as u8, rotation: 0, height: h }, (x, y)));
             // Place Graveyard
             let rand_rotation = (rng.rand_byte() & 3) as i8;
-            if !map.place_feature(&[(0x2c, rand_rotation)], 1, 1, 1, 0x25, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Graveyard as u8, rand_rotation)], 1, 1, 1, 0x25, &mut feature_locations, &mut rng) {
                 //println!("Failed to place graveyard in seed {}", rng.get_code());
                 //map.print_map();
                 continue
             };
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Graveyard as u8, rotation: rand_rotation, height: h }, (x, y)));
             // Place Volcano
             let rand_rotation = (rng.rand_byte() & 3) as i8;
-            if !map.place_feature(&[(0x35, rand_rotation)], 1, 1, 1, 5, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Volcano as u8, rand_rotation)], 1, 1, 1, 5, &mut feature_locations, &mut rng) {
                 //println!("Failed to place volcano in seed {}", rng.get_code());
                 //map.print_map();
                 continue
             };
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Volcano as u8, rotation: rand_rotation, height: h }, (x, y)));
             // Place Sealed Dungeon
-            if !map.place_feature(&[(0x2d, -1)], 1, 1, 1, 0x1b, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Sealed as u8, -1)], 1, 1, 1, 0x1b, &mut feature_locations, &mut rng) {
                 //println!("Failed to place sealed dungeon in seed {}", rng.get_code());
                 //map.print_map();
                 continue
             };
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            let r = map.tiles[x + y * map.width].rotation;
+            map.dungeons.push((Tile { id: MapIds::Sealed as u8, rotation: r, height: h }, (x, y)));
             // Place Shop
             let rand_rotation = (rng.rand_byte() & 3) as i8;
-            if !map.place_feature(&[(0x3b, rand_rotation)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
+            if !map.place_feature(&[(MapIds::Shop as u8, rand_rotation)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
                 //println!("Failed to place shop in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
-
+            let (x,y) = feature_locations[feature_locations.len() - 1];
+            let h = map.tiles[x + y * map.width].height;
+            map.dungeons.push((Tile { id: MapIds::Shop as u8, rotation: rand_rotation, height: h }, (x, y)));
 
             let num_default_tiles = map.tiles.iter().filter(|&t| t.id == 1).count();
             let start_pos_idx1 = rng.rand(num_default_tiles as u32);
@@ -232,6 +270,8 @@ impl Map {
             // After this is some 0-99 rolls that I haven't deciphered, but might be placing items on the
             // ground?
             let _fairy_forest_tree_maybe = rng.rand(0x10);
+
+            map.save_map(&code)?;
 
             return Ok(map)
         }
@@ -566,7 +606,25 @@ impl Map {
                 println!();
             }
         }
-    }
+    }    
+    
+    pub fn save_map(&self, s: &str) -> Result<bool, Box<dyn Error>> {        
+        // Set the map header
+        let mut map_file = vec![0 as u8; 0x23c4];
+        let map_header = expected_map_header();
+        for i in 0x0..0x18 {
+            map_file[0x660 + i] = map_header[i];
+        }
+        // Write out all the tiles
+        for i in 0..self.width*self.height {
+            map_file[i*3 + 0x678] = self.tiles[i].id;
+            map_file[i*3 + 0x679] = self.tiles[i].rotation as u8;
+            map_file[i*3 + 0x67a] = self.tiles[i].height as u8;
+        }
+
+        std::fs::write(format!("./genmaps/{}.BIN", s), &map_file[..])?;
+        Ok(true)
+    }    
 }
 
 // memoize the base maps so we're not constantly doing file reads. It doesn't have much
@@ -575,18 +633,8 @@ std::thread_local!{
     static BASE_MAP_CACHE: RefCell<HashMap<u32, Map>> = RefCell::new(HashMap::new());
 }
 
-fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
-    if let Some(map) = BASE_MAP_CACHE.with(|cache_cell| {
-        let cache = cache_cell.borrow();
-        cache.get(&n).cloned()
-    }) {
-        return Ok(map);
-    };
-
-    let map_file = std::fs::read(format!("./basemaps/GR_BASE{}.BIN", n))?;
-
-    // Confirm the map header is correct and in the right place
-    let expected_map_header = 
+pub fn expected_map_header() -> [u8; 24]{
+    return
         [0x4d, 0x41, 0x50, 0x20, //"MAP "
         0x00, 0x00, 0x1d, 0x64, //size
         0x00, 0x05,
@@ -596,7 +644,11 @@ fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
         0x00, 0x20, 0x00, 0x00,
         0x00, 0x20, 0x00, 0x00
         ];
-    if map_file[0x660..0x678] != expected_map_header {
+}
+
+fn map_validity_check(map_file: &Vec<u8>) -> Result<bool, Box<dyn Error>> {
+    
+    if map_file[0x660..0x678] != expected_map_header() {
         return Err("Header on base map files doesn't match!".into())
     }
 
@@ -604,8 +656,13 @@ fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
     if map_file.len() != 0x23c4 {
         return Err("Base map file is the wrong size!".into())
     }
-    let mut tiles: Vec<Tile> = Vec::with_capacity(50*50);
 
+    return Ok(true)
+}
+
+fn map_file_to_map(map_file: &Vec<u8>) -> Map {
+    let mut tiles: Vec<Tile> = Vec::with_capacity(50*50);
+        
     for i in 0..50*50 {
         tiles.push(Tile{
             id: map_file[i*3 + 0x678], 
@@ -614,7 +671,33 @@ fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
         });
     }
 
-    let map = Map {width: 50, height: 50, tiles};
+    return Map {width: 50, height: 50, tiles, dungeons: Vec::new()};
+}
+
+
+/*fn load_map(s: &string) -> Result<Map, Box<dyn Error>> {
+    let map_file = std::fs::read(format!("./genmaps/{}.BIN", s))?
+    let map = load_core_map_from_vec(map_file)
+    Ok(map)
+}*/
+
+fn load_core_map_from_vec(map_file: &Vec<u8>) -> Result<Map, Box<dyn Error>> {
+    map_validity_check(&map_file)?;
+    let map = map_file_to_map(&map_file);
+    Ok(map)
+}
+
+
+fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
+    if let Some(map) = BASE_MAP_CACHE.with(|cache_cell| {
+        let cache = cache_cell.borrow();
+        cache.get(&n).cloned()
+    }) {
+        return Ok(map);
+    };
+
+    let map_file = std::fs::read(format!("./basemaps/GR_BASE{}.BIN", n))?; // spits out a vector
+    let map = load_core_map_from_vec(&map_file)?;
 
     // Cache a copy of the map so we don't have to reread the file next time
     BASE_MAP_CACHE.with(|cache_cell| {
@@ -654,7 +737,7 @@ mod tests {
             tiles.push(tile2);
         }
 
-        Map{width: 50, height: 50, tiles}
+        Map{width: 50, height: 50, tiles, dungeons: Vec::new()}
     }
 
     // Just a random seed I generated
