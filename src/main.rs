@@ -7,6 +7,8 @@ use std::time::Instant;
 fn main() {
     //let map = map::Map::from_code("QBDBLDCHBB").unwrap();
     //map.print_map();
+    //map.save_map("QBDBLDCHBB");
+    
     let now = Instant::now();
 
     let t1 = thread::spawn(|| {
