@@ -44,7 +44,7 @@ impl Tile {
                 }
             }*/
             0x9 | 0xa | 0xb | 0xc | 0x38 => "\x1b[32m█\x1b[0m",
-            0xd..=0x15 | 0x34 | 0x3a => "\x1b[34m█\x1b[0m",
+            0xd..=0x11 | 0x13..=0x15 | 0x34 | 0x3a => "\x1b[34m█\x1b[0m",
             0x16 | 0x31 => {
                 match self.rotation {
                     0 | 2 => "\x1b[30;44m┃\x1b[0m",
@@ -86,7 +86,8 @@ impl Tile {
             0x36 => "\x1b[93;100mF\x1b[0m",
             0x37 => "\x1b[35;100mT\x1b[0m",
             0x3b => "\x1b[93;100m$\x1b[0m",
-            0xff => "\x1b[93;100m@\x1b[0m",
+            0xff => "\x1b[93;100m@\x1b[0m",            
+            0x12 => "\x1b[93;44mC\x1b[0m",
             _ => "?"
         }
     }
@@ -271,7 +272,7 @@ impl Map {
             // ground?
             let _fairy_forest_tree_maybe = rng.rand(0x10);
 
-            map.save_map(&code)?;
+            //map.save_map(&code)?;
 
             return Ok(map)
         }
