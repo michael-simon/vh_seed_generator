@@ -29,7 +29,7 @@ fn main() {
             println!("\x1b[93;100m{}\t{}\t{}\x1b[0m","G - Graveyard","M - Mansion", "T - Trial");
             println!("\x1b[93;100m{}\t{}\t{}\x1b[0m","R - Ruins","V - Volcano", "F - Fairy");
             println!("\x1b[93;100m{}\t{}\t{}\x1b[0m", "C - Castle Tablet", "@ - Start", "$ - Shop");
-            println!("\x1b[31;100m{}\t\x1b[35;100m{}\x1b[0m", "┏ ┛┗ ┓ (isolated) - Sealed", "T - Transport Crystals");
+            println!("\x1b[93;100m{}\t\x1b[35;100m{}\x1b[0m", "S - Sealed", "T - Transport Crystals");
         }
         else {
             println!("Please enter exactly 10 characters next time. Spaces count!");

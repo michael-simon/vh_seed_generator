@@ -109,7 +109,7 @@ enum MapIds {
     Trial = 0x33,
     Graveyard = 0x2c,
     Volcano = 0x35,
-    Sealed = 0x23,
+    Sealed = 0x2d,
     Shop = 0x3b
 }
 
