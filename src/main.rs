@@ -1,8 +1,72 @@
 ﻿pub mod random;
 pub mod map;
 
+use std::error::Error;
 use std::thread;
 use std::time::Instant;
+use map::_FCargs;
+
+#[macro_use(fcargs)]
+
+fn map_iteration(count: u32, winnow: bool, save: bool ) ->  Result<bool, Box<dyn Error>> {
+    
+    let now = Instant::now();    
+
+    thread::scope(|s| {                    
+        let t1 = s.spawn(|| {
+            for i in 0..count/4 {
+                let code = &random::VHRandom::from_seed(i).get_code();
+                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
+                if save {
+                    m.save_map(&code).unwrap(); 
+                }
+            }
+        });
+    
+        let t2 = s.spawn(|| {
+            for i in count/4..count/2 {
+                let code = &random::VHRandom::from_seed(i).get_code();
+                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
+                if save {
+                    m.save_map(&code).unwrap(); 
+                }
+            }
+        });
+    
+        let t3 = s.spawn(|| {
+            for i in count/2..count/4*3 {
+                let code = &random::VHRandom::from_seed(i).get_code();
+                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
+                if save {
+                    m.save_map(&code).unwrap(); 
+                }
+            }
+        });
+
+        t1.join().unwrap();
+        t2.join().unwrap();
+        t3.join().unwrap();
+    });
+        for i in count/4*3..count {
+                let code = &random::VHRandom::from_seed(i).get_code();
+                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
+                if save {
+                    m.save_map(&code).unwrap(); 
+                }
+        }
+    
+        let elapsed = now.elapsed();
+        let mut savestring = "";
+        if save {
+            savestring = ", saved ";
+        }
+        let mut winnowedstring = "";
+        if winnow {
+            winnowedstring = ", winnowed "
+        }
+        println!("{} maps generated {}{}in {} seconds", count, winnowedstring, savestring, elapsed.as_secs_f64());
+        return Ok(true);
+}
 
 fn main() {
     //let map = map::Map::from_code("QBDBLDCHBB").unwrap();
@@ -12,8 +76,11 @@ fn main() {
     let mut line = String::new();
     println!("Virtual Hydlide Map Generation Toolkit v1.0");
     println!("1 for timing generating a million seeds");
-    println!("2 for generating and printing a specific seed");
-    let _bytecount = std::io::stdin().read_line(&mut line).unwrap();    
+    println!("2 for generating and printing a specific seed");    
+    println!("3 to generate ascii for all 5 base maps");
+    println!("4 to generate a given number of seeds, winnowing the results out and saving only the remainder.");
+    println!("5 to read a directory of maps, further winnowing the results to stdout strings of the seeds");
+    let _bytecount = std::io::stdin().read_line(&mut line).unwrap();        
     let choice = line.trim_end().parse::<u8>().unwrap();
     if choice == 2 {
         println!("Enter a seed string (10 characters)");
@@ -24,7 +91,7 @@ fn main() {
             line2.pop();
         }        
         if line2.len() == 10 {
-            let map = map::Map::from_code(line2.as_str()).unwrap();
+            let map = map::Map::from_code(&fcargs!(line2.as_str())).unwrap();
             map.print_map();
             println!("Legend");
             println!("\x1b[93;100m{}\t{}\t{}\x1b[0m","G - Graveyard","M - Mansion", "T - Trial");
@@ -36,36 +103,41 @@ fn main() {
             println!("Please enter exactly 10 characters next time. Spaces count!");
         }
     }
-    else {
-        let now = Instant::now();
-
-        let t1 = thread::spawn(|| {
-            for i in 0..1000000/4 {
-                let _ = map::Map::from_code(&random::VHRandom::from_seed(i).get_code());
-            }
-        });
-    
-        let t2 = thread::spawn(|| {
-            for i in 1000000/4..1000000/2 {
-                let _ = map::Map::from_code(&random::VHRandom::from_seed(i).get_code());
-            }
-        });
-    
-        let t3 = thread::spawn(|| {
-            for i in 1000000/2..3000000/4 {
-                let _ = map::Map::from_code(&random::VHRandom::from_seed(i).get_code());
-            }
-        });
-    
-        for i in 3000000/4..1000000 {
-            let _ = map::Map::from_code(&random::VHRandom::from_seed(i).get_code());
+    else if choice == 3 {
+        for i in 1..6 {
+          let m = match map::load_base_map(i) {
+              Ok(m) => m,
+              Err(error) => panic!("Couldn't open base map {}: {:?}",i, error),
+          };
+          m.print_map();
+          println!("--------------------------------------------------");
         }
-    
-        t1.join().unwrap();
-        t2.join().unwrap();
-        t3.join().unwrap();
-    
-        let elapsed = now.elapsed();
-        println!("1,000,000 seeds generated in {} seconds", elapsed.as_secs_f64());
+    }
+    else if choice == 1 {
+        let _ = map_iteration(1000000, false, false);
+    }
+    else if choice == 4 {
+        let mut save = false;
+        let mut winnow = false;
+        println!("Enter the number of iterations you want");
+        let mut line2 = String::new();
+        let mut _count = std::io::stdin().read_line(&mut line2).unwrap();        
+        let iterations = line2.trim_end().parse::<u32>().unwrap();
+        println!("Enter Y to winnow (winnowing criteria: perfect V->S->C walk)");
+        let mut line3 = String::new();
+        _count = std::io::stdin().read_line(&mut line3).unwrap();        
+        if line3.trim_end() == "Y" {
+            winnow = true;
+        }
+        println!("Enter Y to save (9K per file, do the math)");
+        let mut line4 = String::new();
+        _count = std::io::stdin().read_line(&mut line4).unwrap();        
+        if line4.trim_end() == "Y" {
+            save = true;
+        }
+        map_iteration(iterations, winnow, save).unwrap();
+    }
+    else {
+        println!("You didn't pick one of the options, so we're done! Congratulations.")
     }
 }
