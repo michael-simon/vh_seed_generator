@@ -13,16 +13,17 @@ fn main() {
     println!("Virtual Hydlide Map Generation Toolkit v1.0");
     println!("1 for timing generating a million seeds");
     println!("2 for generating and printing a specific seed");
-    let _bytecount = std::io::stdin().read_line(&mut line).unwrap();
-    line.pop();
-    let choice = line.parse::<u8>().unwrap();
+    let _bytecount = std::io::stdin().read_line(&mut line).unwrap();    
+    let choice = line.trim_end().parse::<u8>().unwrap();
     if choice == 2 {
         println!("Enter a seed string (10 characters)");
         println!("♂ is Alt-11, ♀ is Alt-12");
         let mut line2 = String::new();
-        let seedcount = std::io::stdin().read_line(&mut line2).unwrap();
-        line2.pop();        
-        if seedcount == 11 {
+        let _seedcount = std::io::stdin().read_line(&mut line2).unwrap();
+        while line2.len() > 10 {
+            line2.pop();
+        }        
+        if line2.len() == 10 {
             let map = map::Map::from_code(line2.as_str()).unwrap();
             map.print_map();
             println!("Legend");
