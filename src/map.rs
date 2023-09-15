@@ -93,6 +93,25 @@ impl Tile {
     }
 }
 
+#[macro_use]
+mod args {
+    pub struct _FCargs {
+        pub code: String,
+        pub winnow: bool
+    }
+    #[macro_export]
+    macro_rules! fcargs {
+        ($mand_1:expr) => {
+            _FCargs {code: $mand_1.to_string(), winnow: false}
+        };
+        ($mand_1:expr, $opt:expr) => {
+            _FCargs {code: $mand_1.to_string(), winnow: $opt}
+        };
+    }
+}
+
+pub use args::_FCargs;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Map {
     width : usize,
@@ -115,14 +134,21 @@ enum MapIds {
 
 impl Map {
     /// Generate the overworld map from a given code.
-    pub fn from_code(code : &str) -> Result<Map, Box<dyn Error>>{
+    /// The winnow paramaeter allows you to stop generation based on the Map::winnow function for the instance
+    pub fn from_code(fc: &args::_FCargs) -> Result<Map, Box<dyn Error>>{
+        let code = fc.code.as_str();
+        let winnow = fc.winnow;
         let Some(mut rng) = VHRandom::from_code(code)
             else {return Err("Could not create RNG from Code!".into())};
         
         let map_id = rng.rand(5) + 1;
+        if winnow && (map_id != 4) {
+            return Err("Map was not base map 4, cannot be good.".into());
+        }
         let mut base_map = load_base_map(map_id)?;
 
-        base_map.rotate(rng.rand(4) as i8);
+        let base_rotation = rng.rand(4) as u8;
+        base_map.rotate(base_rotation as i8);
 
         let mut timeout = 0;
         let mut rng_seed = rng.get_seed();
@@ -246,6 +272,14 @@ impl Map {
             let h = map.tiles[x + y * map.width].height;
             let r = map.tiles[x + y * map.width].rotation;
             map.dungeons.push((Tile { id: MapIds::Sealed as u8, rotation: r, height: h }, (x, y)));
+
+            // Winnowing calculation can be completed
+            if winnow {
+                if map.volcano_to_sealed_to_castle(base_rotation) != 9 {
+                  return Err("Map was not base map 4, cannot be good.".into());
+                }
+            }
+            
             // Place Shop
             let rand_rotation = (rng.rand_byte() & 3) as i8;
             if !map.place_feature(&[(MapIds::Shop as u8, rand_rotation)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
@@ -317,8 +351,7 @@ impl Map {
             }
             _ => return
         }
-
-        
+       
     }
 
     fn fill_tiles(&mut self, tile_ids: &[u8], mut count: u32, rng: &mut VHRandom) {
@@ -626,6 +659,23 @@ impl Map {
         std::fs::write(format!("./genmaps/{}.BIN", s), &map_file[..])?;
         Ok(true)
     }    
+
+    pub fn volcano_to_sealed_to_castle(&self, rotation: u8) -> u8 {
+        let len = self.dungeons.len();
+        let (_, (vx, vy)) = self.dungeons[len-1]; // Volcano
+        let (_, (sx, sy)) = self.dungeons[len-2]; // Sealed
+        let (tx, ty) = match rotation {
+            0 => (13, 15), //(14 and 16 tiles from UL)
+            1 => (15, 35), //(16 and 14 tiles from LL)
+            2 => (35, 33), //(14 and 16 tiles from the LR)
+            3 => (33, 13), //(16 and 14 tiles from the UR)
+            _ => (55, 55) // will always fail the winnow
+        };
+        let mut distance: u8 = 0;
+        distance += (i8::abs((sx as i8)-(vx as i8)) + i8::abs((sy as i8)-(vy as i8))) as u8; // Best here is 6, wrap is irrel
+        distance += (i8::abs((tx as i8)-(sx as i8)) + i8::abs((ty as i8)-(sy as i8))) as u8; // Best here is 3, wrap is irrel
+        return distance;
+    }
 }
 
 // memoize the base maps so we're not constantly doing file reads. It doesn't have much
@@ -689,7 +739,7 @@ fn load_core_map_from_vec(map_file: &Vec<u8>) -> Result<Map, Box<dyn Error>> {
 }
 
 
-fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
+pub fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
     if let Some(map) = BASE_MAP_CACHE.with(|cache_cell| {
         let cache = cache_cell.borrow();
         cache.get(&n).cloned()
@@ -751,6 +801,7 @@ mod tests {
 
         // Replace the 0xff start tile with a default tile
         generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
+        // Replace the dungeons vector b/c the mediafen load doesn't '
 
         assert!(mednafen_map == generated_map);
     }
