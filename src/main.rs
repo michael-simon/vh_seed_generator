@@ -8,37 +8,46 @@ use map::_FCargs;
 
 #[macro_use(fcargs)]
 
-fn map_iteration(count: u32, winnow: bool, save: bool ) ->  Result<bool, Box<dyn Error>> {
+fn map_iteration(count: u32, start: u32, winnow: bool, save: bool ) ->  Result<bool, Box<dyn Error>> {
     
     let now = Instant::now();    
 
     thread::scope(|s| {                    
         let t1 = s.spawn(|| {
-            for i in 0..count/4 {
+            for i in start..(start + count/4) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
-                if save {
-                    m.save_map(&code).unwrap(); 
+                let m = match map::Map::from_code(&fcargs!(&code, winnow)) {
+                    Ok(m) => Some(m),
+                    Err(_) => None,
+                };
+                if save && m.is_some() {
+                    m.unwrap().save_map(&code).unwrap(); 
                 }
             }
         });
     
         let t2 = s.spawn(|| {
-            for i in count/4..count/2 {
+            for i in (start + count/4)..(start + count/2) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
-                if save {
-                    m.save_map(&code).unwrap(); 
+                let m = match map::Map::from_code(&fcargs!(&code, winnow)) {
+                    Ok(m) => Some(m),
+                    Err(_) => None,
+                };
+                if save && m.is_some() {
+                    m.unwrap().save_map(&code).unwrap(); 
                 }
             }
         });
     
         let t3 = s.spawn(|| {
-            for i in count/2..count/4*3 {
+            for i in (start + count/2)..(start + count/4*3) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
-                if save {
-                    m.save_map(&code).unwrap(); 
+                let m = match map::Map::from_code(&fcargs!(&code, winnow)) {
+                    Ok(m) => Some(m),
+                    Err(_) => None,
+                };
+                if save && m.is_some() {
+                    m.unwrap().save_map(&code).unwrap(); 
                 }
             }
         });
@@ -47,11 +56,14 @@ fn map_iteration(count: u32, winnow: bool, save: bool ) ->  Result<bool, Box<dyn
         t2.join().unwrap();
         t3.join().unwrap();
     });
-        for i in count/4*3..count {
+        for i in (start + count/4*3)..(start + count) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = map::Map::from_code(&fcargs!(&code, winnow)).unwrap();                    
-                if save {
-                    m.save_map(&code).unwrap(); 
+                let m = match map::Map::from_code(&fcargs!(&code, winnow)) {
+                    Ok(m) => Some(m),
+                    Err(_) => None,
+                };
+                if save && m.is_some() {
+                    m.unwrap().save_map(&code).unwrap(); 
                 }
         }
     
@@ -114,14 +126,18 @@ fn main() {
         }
     }
     else if choice == 1 {
-        let _ = map_iteration(1000000, false, false);
+        let _ = map_iteration(1000000, 0, false, false);
     }
     else if choice == 4 {
         let mut save = false;
         let mut winnow = false;
+        println!("Enter what number you want to start on");
+        let mut line_start = String::new();
+        let mut _count = std::io::stdin().read_line(&mut line_start).unwrap();        
+        let start = line_start.trim_end().parse::<u32>().unwrap();
         println!("Enter the number of iterations you want");
         let mut line2 = String::new();
-        let mut _count = std::io::stdin().read_line(&mut line2).unwrap();        
+        _count = std::io::stdin().read_line(&mut line2).unwrap();        
         let iterations = line2.trim_end().parse::<u32>().unwrap();
         println!("Enter Y to winnow (winnowing criteria: perfect V->S->C walk)");
         let mut line3 = String::new();
@@ -135,7 +151,7 @@ fn main() {
         if line4.trim_end() == "Y" {
             save = true;
         }
-        map_iteration(iterations, winnow, save).unwrap();
+        map_iteration(iterations, start, winnow, save).unwrap();
     }
     else {
         println!("You didn't pick one of the options, so we're done! Congratulations.")
