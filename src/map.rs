@@ -275,8 +275,8 @@ impl Map {
 
             // Winnowing calculation can be completed
             if winnow {
-                if map.volcano_to_sealed_to_castle(base_rotation) != 9 {
-                  return Err("Map was not base map 4, cannot be good.".into());
+                if map.volcano_to_sealed_to_castle(base_rotation) > 9 {
+                  return Err("Ending not close enough to perfect".into());
                 }
             }
             
@@ -662,18 +662,19 @@ impl Map {
 
     pub fn volcano_to_sealed_to_castle(&self, rotation: u8) -> u8 {
         let len = self.dungeons.len();
-        let (_, (vx, vy)) = self.dungeons[len-1]; // Volcano
-        let (_, (sx, sy)) = self.dungeons[len-2]; // Sealed
+        let (_, (vx, vy)) = self.dungeons[len-2]; // Volcano
+        let (_, (sx, sy)) = self.dungeons[len-1]; // Sealed
         let (tx, ty) = match rotation {
-            0 => (13, 15), //(14 and 16 tiles from UL)
-            1 => (15, 35), //(16 and 14 tiles from LL)
-            2 => (35, 33), //(14 and 16 tiles from the LR)
-            3 => (33, 13), //(16 and 14 tiles from the UR)
+            0 => (13, 14), //(14 and 15 tiles from UL)
+            1 => (14, 35), //(15 and 14 tiles from LL)
+            2 => (35, 34), //(14 and 15 tiles from the LR)
+            3 => (34, 13), //(15 and 14 tiles from the UR)
             _ => (55, 55) // will always fail the winnow
         };
         let mut distance: u8 = 0;
-        distance += (i8::abs((sx as i8)-(vx as i8)) + i8::abs((sy as i8)-(vy as i8))) as u8; // Best here is 6, wrap is irrel
+        distance += (i8::abs((sx as i8)-(vx as i8)) + i8::abs((sy as i8)-(vy as i8))) as u8; // Best here is 6, wrap is irrel        
         distance += (i8::abs((tx as i8)-(sx as i8)) + i8::abs((ty as i8)-(sy as i8))) as u8; // Best here is 3, wrap is irrel
+        
         return distance;
     }
 }
