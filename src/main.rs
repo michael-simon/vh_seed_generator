@@ -80,18 +80,13 @@ fn map_iteration(count: u32, start: u32, winnow: bool, save: bool ) ->  Result<b
         return Ok(true);
 }
 
-fn main() {
-    //let map = map::Map::from_code("QBDBLDCHBB").unwrap();
-    //map.print_map();
-    //map.save_map("QBDBLDCHBB");
-
+fn main() {    
     let mut line = String::new();
-    println!("Virtual Hydlide Map Generation Toolkit v1.0");
+    println!("Virtual Hydlide Map Generation Toolkit v1.1");
     println!("1 for timing generating a million seeds");
     println!("2 for generating and printing a specific seed");    
     println!("3 to generate ascii for all 5 base maps");
-    println!("4 to generate a given number of seeds, winnowing the results out and saving only the remainder.");
-    println!("5 to read a directory of maps, further winnowing the results to stdout strings of the seeds");
+    println!("4 to generate a given number of seeds, possibly winnowing the results out and saving only the remainder.");
     let _bytecount = std::io::stdin().read_line(&mut line).unwrap();        
     let choice = line.trim_end().parse::<u8>().unwrap();
     if choice == 2 {
