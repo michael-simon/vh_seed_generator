@@ -93,19 +93,49 @@ impl Tile {
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum Difficulty {
+        Easy,
+        Medium,
+        Hard,
+        PRO,
+}
+
+pub fn difficulty_text(d:&Difficulty) -> &'static str {
+    match d {
+        Difficulty::Easy => return "Easy",
+        Difficulty::Medium => return "Medium",
+        Difficulty::Hard => return "Hard",
+        Difficulty::PRO => return "PRO"
+    }    
+}
+
+pub fn text_difficulty(s:&str) -> Difficulty {
+    match s {
+        "Easy" => return Difficulty::Easy,
+        "Medium" => return Difficulty::Medium,
+        "Hard" => return Difficulty::Hard,
+        "PRO" => return Difficulty::PRO,
+        &_ => return Difficulty::Easy,
+    }
+}
+
 #[macro_use]
-mod args {
+mod args {       
+    pub use crate::map;
     pub struct _FCargs {
         pub code: String,
-        pub winnow: bool
+        pub difficulty: map::Difficulty,
+        pub winnow: bool,
     }
+    
     #[macro_export]
     macro_rules! fcargs {
-        ($mand_1:expr) => {
-            _FCargs {code: $mand_1.to_string(), winnow: false}
+        ($mand_1:expr, $mand_2:expr) => {
+            _FCargs {code: $mand_1.to_string(), difficulty: $mand_2, winnow: false}
         };
-        ($mand_1:expr, $opt:expr) => {
-            _FCargs {code: $mand_1.to_string(), winnow: $opt}
+        ($mand_1:expr, $mand_2:expr, $opt:expr) => {
+            _FCargs {code: $mand_1.to_string(), difficulty: $mand_2, winnow: $opt}
         };
     }
 }
@@ -138,6 +168,7 @@ impl Map {
     pub fn from_code(fc: &args::_FCargs) -> Result<Map, Box<dyn Error>>{
         let code = fc.code.as_str();
         let winnow = fc.winnow;
+        let difficulty = fc.difficulty;
         let Some(mut rng) = VHRandom::from_code(code)
             else {return Err("Could not create RNG from Code!".into())};
         
@@ -280,9 +311,15 @@ impl Map {
                 }
             }
             
-            // Place Shop
+            // Place Shop            
             let rand_rotation = (rng.rand_byte() & 3) as i8;
-            if !map.place_feature(&[(MapIds::Shop as u8, rand_rotation)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
+
+            let mut shop_feature = MapIds::Shop as u8;
+            if difficulty == Difficulty::Hard || difficulty == Difficulty::PRO {
+                shop_feature = 1 as u8;
+            }
+            
+            if !map.place_feature(&[(shop_feature, rand_rotation)], 1, 1, 1, 1, &mut feature_locations, &mut rng) {
                 //println!("Failed to place shop in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
@@ -290,7 +327,7 @@ impl Map {
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
             map.dungeons.push((Tile { id: MapIds::Shop as u8, rotation: rand_rotation, height: h }, (x, y)));
-
+            
             let num_default_tiles = map.tiles.iter().filter(|&t| t.id == 1).count();
             let start_pos_idx1 = rng.rand(num_default_tiles as u32);
 
