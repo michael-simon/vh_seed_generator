@@ -116,11 +116,15 @@ fn main() {
         }
         else if choice == 3 {
             for i in 1..6 {
-              let m = match map::load_base_map(i) {
+              let mut m = match map::load_base_map(i) {
                   Ok(m) => m,
                   Err(error) => panic!("Couldn't open base map {}: {:?}",i, error),
               };
-              m.print_map();
+              for _i in 0..4 {
+                m.rotate(1);
+                m.print_map();
+                println!("--------------------------------------------------");
+              }
               println!("--------------------------------------------------");
             }
         }
