@@ -109,6 +109,7 @@ fn main() {
                 println!("\x1b[93;100m{}\t{}\t{}\x1b[0m","R - Ruins","V - Volcano", "F - Fairy");
                 println!("\x1b[93;100m{}\t{}\t{}\x1b[0m", "C - Castle Tablet", "@ - Start", "$ - Shop");
                 println!("\x1b[93;100m{}\t\x1b[35;100m{}\x1b[0m", "S - Sealed", "T - Transport Crystals");
+                println!("\x1b[32m{}\t{}\t{}\t{}\x1b[0m", "h - herbs", "a - antidotes", "p - poison herbs","e - elevator");
             }
             else {
                 println!("Please enter exactly 10 characters next time. Spaces count!");
