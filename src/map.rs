@@ -43,7 +43,11 @@ impl Tile {
                     _ => "\x1b[33;100m▜\x1b[0m",
                 }
             }*/
-            0x9 | 0xa | 0xb | 0xc | 0x38 => "\x1b[32m█\x1b[0m",
+            0x9 => "\x1b[32m█\x1b[0m",
+            0xa => "\x1b[32mh\x1b[0m",
+            0xb => "\x1b[32ma\x1b[0m",
+            0xc => "\x1b[32mp\x1b[0m",
+            0x38 => "\x1b[32me\x1b[0m",
             0xd..=0x11 | 0x13..=0x15 | 0x34 | 0x3a => "\x1b[34m█\x1b[0m",
             0x16 | 0x31 => {
                 match self.rotation {
