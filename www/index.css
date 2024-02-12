@@ -1,0 +1,32 @@
+﻿input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    /* display: none; <- Crashes Chrome on hover */
+    -webkit-appearance: none;
+    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+input[type=text] {
+    width: 32px;
+}
+
+.c {
+  width: 100px;
+}
+
+.binary {
+  display: inline;
+  font-family: monospace;
+  font-size: 1.9em;
+}
+
+.column {
+  float: left;
+  width: 50%;
+}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}

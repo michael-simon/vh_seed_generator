@@ -1,5 +1,7 @@
 A program to generate maps from codes in the same way as Virtual Hydlide, made in an effort to help find better codes for speedrunning. 
 
+Additionally, a small webpage app to aid in the understanding of how seed generation works in gory binary detail. 
+
 SETUP
 
 The program needs to be run in a directory with the 5 base maps in a `basemaps` folder. The base maps are the `GR_BASE<n>.BIN` files found in the `HYDLIDE\MAP01` directory on your Virtual Hydlide CD. 
@@ -15,3 +17,6 @@ The program currently does 3 things. Option 1 lets you set the difficulty of the
 * Option 2 - Generate a single seed with your current difficulty.
 * Option 3 - Show you all 5 base maps.
 * Option 4 - Generate a large group of maps in linear seed order. You may choose the starting point (unsigned maxint 32), the amount (unsigned maxint32, but if both together >= 2^32, it's not gonna work), whether you want to 'winnow' (currently winnowing is only map 4 where the Tablet <- Sealed Caves <- Volcano path is minimized), and whether you want to save. There is no console output for this ATM, just saved maps.
+
+WEBPAGE
+The webpage should be able to be run by loading the index.html in the www directory. Enter valid characters for strings and it will calculate out for you. Remember that all the default characters are spaces.
