@@ -84,7 +84,7 @@ fn main() {
     let mut difficulty:map::Difficulty = map::Difficulty::Easy;    
     loop {
         let mut line = String::new();
-        println!("Virtual Hydlide Map Generation Toolkit v2.0");
+        println!("Virtual Hydlide Map Generation Toolkit v2.3.0");
         println!("1 to set the difficulty, currently {}", map::difficulty_text(&difficulty));
         println!("2 for generating and printing a specific seed");    
         println!("3 to generate ascii for all 5 base maps");
@@ -92,27 +92,24 @@ fn main() {
         println!("Anything else to quit or crash.");
         let _bytecount = std::io::stdin().read_line(&mut line).unwrap();
         println!("{}",line);
-        let choice = line.trim_end().parse::<u8>().unwrap();
+        let choice = line.strip_suffix("\n").unwrap().parse::<u8>().unwrap();
         if choice == 2 {
             println!("Enter a seed string (10 characters)");
             println!("♂ is Alt-11, ♀ is Alt-12");
             let mut line2 = String::new();
-            let _seedcount = std::io::stdin().read_line(&mut line2).unwrap();
-            while line2.len() > 10 {
-                line2.pop();
-            }        
-            if line2.len() == 10 {
-                let map = map::Map::from_code(&fcargs!(line2.as_str(), difficulty)).unwrap();
-                map.print_map();
+            let _seedcount = std::io::stdin().read_line(&mut line2).unwrap();            
+            let mut str_line = line2.as_str().strip_suffix("\n").unwrap();            
+            let result_map= map::Map::from_code(&fcargs!(str_line, difficulty));
+            match result_map {
+                Ok(map) => { map.print_map();
                 println!("Legend");
                 println!("\x1b[93;100m{}\t{}\t{}\x1b[0m","G - Graveyard","M - Mansion", "T - Trial");
                 println!("\x1b[93;100m{}\t{}\t{}\x1b[0m","R - Ruins","V - Volcano", "F - Fairy");
                 println!("\x1b[93;100m{}\t{}\t{}\x1b[0m", "C - Castle Tablet", "@ - Start", "$ - Shop");
                 println!("\x1b[93;100m{}\t\x1b[35;100m{}\x1b[0m", "S - Sealed", "T - Transport Crystals");
                 println!("\x1b[32m{}\t{}\t{}\t{}\x1b[0m", "h - herbs", "a - antidotes", "p - poison herbs","e - elevator");
-            }
-            else {
-                println!("Please enter exactly 10 characters next time. Spaces count!");
+                },
+                Err(e) => { println!("{}", e); println!("Please enter exactly 10 characters next time. Spaces count!"); }
             }
         }
         else if choice == 3 {

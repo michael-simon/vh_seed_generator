@@ -1,0 +1,71 @@
+﻿<html>
+<head>
+<link rel="stylesheet" href="index.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="index.js"></script>
+</head> 
+<body>
+<div class="row">
+<div class="column" id="seedworksheet">
+<div id="initialseed">
+<div id="initialseedboxes">
+<form>
+    <input id="i0" class="i" type="text" value=" ">
+    <input id="i1" class="i" type="text" value=" ">
+    <input id="i2" class="i" type="text" value=" ">
+    <input id="i3" class="i" type="text" value=" ">
+    <input id="i4" class="i" type="text" value=" ">
+    <input id="i5" class="i" type="text" value=" ">
+    <input id="i6" class="i" type="text" value=" ">
+    <input id="i7" class="i" type="text" value=" ">
+    <input id="i8" class="i" type="text" value=" ">
+    <input id="i9" class="i" type="text" value=" ">
+</form>
+</div>
+<div id=i_rep>
+  <div class="c">Core 32 </div><div class="binary" id=i_c1_shifted></div>
+  <div class="c">Extra 32 </div><div class="binary" id=i_c2_shifted></div>  
+  <div class="c">Combined 32 </div><div class="binary" id=i_results></div>
+  <div class="c">Canonical</div><div id=i_canonical></div>
+</div>
+</div>
+<div id="workingseed">
+<form>
+    <input id="w0" class="w" type="text" value=" ">
+    <input id="w1" class="w" type="text" value=" ">
+    <input id="w2" class="w" type="text" value=" ">
+    <input id="w3" class="w" type="text" value=" ">
+    <input id="w4" class="w" type="text" value=" ">
+    <input id="w5" class="w" type="text" value=" ">
+    <input id="w6" class="w" type="text" value=" ">
+    <input id="w7" class="w" type="text" value=" ">
+    <input id="w8" class="w" type="text" value=" ">
+    <input id="w9" class="w" type="text" value=" ">
+</form>
+<div id=w_rep>
+  <div class="c">Core 32 </div><div class="binary" id=w_c1_shifted></div>
+  <div class="c">Extra 32 </div><div class="binary" id=w_c2_shifted></div>
+  <div class="c">Combined 32 </div><div class="binary" id=w_results></div>
+  </div>
+</div>
+</div>
+<div class="column" id="algorithm explanation">
+<p>
+The valid characters, in binary order from 0 to 31, are BCDFGHJKLMNPQRSTAIUEO VWXYZ.,&amp;&lt;&gt; (&lt; and &gt; replace ♂ and ♀ respectively)
+</p>
+<p>
+The first 16 characters are represented in 4 bits. The last 16 are represented in 5 bits. The seed is built up left to right by sequentially ORing in each letter, from left to right, as binary, into position (it's actually placing and shifting it over repeatedly, but in the end it looks like it's just in place.) If you use only letters from the first 16 for 8 chars of your seed, you will not overflow with bits, and then two Bs (0s) will fill the first 8 bits twice with 0s. 
+</p>
+<p>
+But using anything with 5 bits means that you can 'overflow' a 32 bit uint, which causes the 'extra 32' to fill up as you would almost expect: coming in from the left as if it were filling the 32 next bits above it in big-endian (despite the saturn being little-endian).
+</p>
+<p>
+However, if you have an overflow as you are placing the last few bits into your Core 32, what happens is that the entire character is ORed into place at the end, no matter how big the overflow, and THEN what would be the overflowing bits if they had just let it shift off the right side normally are ored into the Extra 32. For example, if you have assigned 28 bits, and then you put in a Y (equivalent to a M with an extra bit in front, so 11001). it will take core32 | 11001 (with the bottom 4 bits being 0) AND it will start extra32 with the bit 1, and then continuing 
+</p>
+<p>
+Finally, the two values are XORed together to yield the combined 32 bit seed that will be used.
+</p>
+</div>
+</div>
+</body>
+</html>

@@ -6,7 +6,7 @@ pub struct VHRandom {
 }
 
 const CODE_CONVERSION_STR: &str = "BCDFGHJKLMNPQRSTAIUEO VWXYZ.,&♂♀";
-
+//                                 AIUEO VWXYZ.,&♂♀
 impl VHRandom {
     /// Creates a new RNG from a seed directly, also creating a valid code that can generate
     /// that initial seed.
@@ -55,6 +55,7 @@ impl VHRandom {
         let mut c2_shift: u32 = 0;
         let mut code_array: [u8; 10] = [0; 10];
 
+
         for (i, &letter) in raw_code.iter().enumerate() {
             code_array[i] = letter;
             if c1_shift < 32 {
@@ -63,6 +64,9 @@ impl VHRandom {
 
                 let letter_shifted: u32 = ((letter & letter_mask) as u32)
                     .wrapping_shl((32 - c1_shift).saturating_sub(shift));
+
+                #[cfg(debug_assertions)]
+                println!("{:#x} {} {} {:#x}", letter, c1_shift, shift, letter_shifted);
 
                 c1 |= letter_shifted;
                 c1_shift += shift;
@@ -78,17 +82,24 @@ impl VHRandom {
                 let letter_mask = (1 << shift) - 1;
                 let letter_shifted: u32 = ((letter & letter_mask) as u32)
                     .wrapping_shl((32 - c2_shift).saturating_sub(shift));
+                #[cfg(debug_assertions)]
+                println!("{:#x} {} {} {:#x}", letter, c2_shift, shift, letter_shifted);
 
                 c2 |= letter_shifted;
                 c2_shift += shift;
             }
+            #[cfg(debug_assertions)]
+            println!("c1:{:#x} c2:{:#x}", c1, c2);
         }
+        
+        #[cfg(debug_assertions)]
+        println!("Seed gen: {:#x} {:#x} {} {:#x}", c1, c2, c2_shift, c1 ^ (c2 >> 32 - c2_shift));
 
         Some(VHRandom {
             seed: c1 ^ (c2 >> 32 - c2_shift),
             code: code_array,
-        })
-    }
+        })        
+    }    
 
     ///Returns the current value of the RNG seed
     pub fn get_seed(&self) -> u32 {

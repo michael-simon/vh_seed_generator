@@ -171,6 +171,8 @@ impl Map {
     /// The winnow paramaeter allows you to stop generation based on the Map::winnow function for the instance
     pub fn from_code(fc: &args::_FCargs) -> Result<Map, Box<dyn Error>>{
         let code = fc.code.as_str();
+        #[cfg(debug_assertions)]
+        println!("{}", code);
         let winnow = fc.winnow;
         let difficulty = fc.difficulty;
         let Some(mut rng) = VHRandom::from_code(code)
