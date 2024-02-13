@@ -8,7 +8,7 @@ use map::_FCargs;
 
 #[macro_use(fcargs)]
 
-fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: bool, save: bool ) ->  Result<bool, Box<dyn Error>> {
+fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: &Vec<bool>, save: bool ) ->  Result<bool, Box<dyn Error>> {
     
     let now = Instant::now();    
 
@@ -16,7 +16,7 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: bo
         let t1 = s.spawn(|| {
             for i in start..(start + count/4) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = match map::Map::from_code(&fcargs!(&code, difficulty, winnow)) {
+                let m = match map::OverworldMap::from_code(&fcargs!(&code, difficulty, winnow.to_vec())) {
                     Ok(m) => Some(m),
                     Err(_) => None,
                 };
@@ -29,7 +29,7 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: bo
         let t2 = s.spawn(|| {
             for i in (start + count/4)..(start + count/2) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = match map::Map::from_code(&fcargs!(&code, difficulty, winnow)) {
+                let m = match map::OverworldMap::from_code(&fcargs!(&code, difficulty, winnow.to_vec())) {
                     Ok(m) => Some(m),
                     Err(_) => None,
                 };
@@ -42,7 +42,7 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: bo
         let t3 = s.spawn(|| {
             for i in (start + count/2)..(start + count/4*3) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = match map::Map::from_code(&fcargs!(&code, difficulty, winnow)) {
+                let m = match map::OverworldMap::from_code(&fcargs!(&code, difficulty, winnow.to_vec())) {
                     Ok(m) => Some(m),
                     Err(_) => None,
                 };
@@ -58,7 +58,7 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: bo
     });
         for i in (start + count/4*3)..(start + count) {
                 let code = &random::VHRandom::from_seed(i).get_code();
-                let m = match map::Map::from_code(&fcargs!(&code, difficulty, winnow)) {
+                let m = match map::OverworldMap::from_code(&fcargs!(&code, difficulty, winnow.to_vec())) {
                     Ok(m) => Some(m),
                     Err(_) => None,
                 };
@@ -72,9 +72,11 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: bo
         if save {
             savestring = ", saved ";
         }
-        let mut winnowedstring = "";
-        if winnow {
-            winnowedstring = ", winnowed "
+        let mut winnowedstring = String::from("");
+        for i in 0..winnow.len() {
+            if winnow[i] {
+              winnowedstring = winnowedstring + &i.to_string() + "w ";
+            }
         }
         println!("{} maps generated {}{}in {} seconds", count, winnowedstring, savestring, elapsed.as_secs_f64());
         return Ok(true);
@@ -99,7 +101,7 @@ fn main() {
             let mut line2 = String::new();
             let _seedcount = std::io::stdin().read_line(&mut line2).unwrap();            
             let mut str_line = line2.as_str().strip_suffix("\n").unwrap();            
-            let result_map= map::Map::from_code(&fcargs!(str_line, difficulty));
+            let result_map= map::OverworldMap::from_code(&fcargs!(str_line, difficulty));
             match result_map {
                 Ok(map) => { map.print_map();
                 println!("Legend");
@@ -135,7 +137,7 @@ fn main() {
         }
         else if choice == 4 {
             let mut save = false;
-            let mut winnow = false;
+            let mut winnow = Vec::from([false, false]);
             println!("Enter what number you want to start on");
             let mut line_start = String::new();
             let mut _count = std::io::stdin().read_line(&mut line_start).unwrap();        
@@ -148,7 +150,8 @@ fn main() {
             let mut line3 = String::new();
             _count = std::io::stdin().read_line(&mut line3).unwrap();        
             if line3.trim_end() == "Y" {
-                winnow = true;
+                winnow[0] = false;
+                winnow[1] = false;               
             }
             println!("Enter Y to save (9K per file, do the math)");
             let mut line4 = String::new();
@@ -156,7 +159,7 @@ fn main() {
             if line4.trim_end() == "Y" {
                 save = true;
             }
-            map_iteration(iterations, start, difficulty, winnow, save).unwrap();
+            map_iteration(iterations, start, difficulty, &winnow, save).unwrap();
         }
         else {
             println!("You didn't pick one of the options, so we're done! Congratulations.");

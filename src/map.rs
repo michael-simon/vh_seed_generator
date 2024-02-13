@@ -1,16 +1,17 @@
+
 use std::error::Error;
 use crate::random::VHRandom;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Tile {
     pub id : u8,
     pub rotation : i8,
     pub height : i8
 }
 
-impl Tile {
+impl Tile {   
     fn get_ascii_art(&self) -> &'static str {
         match self.id {
             0x0 => " ",
@@ -97,6 +98,8 @@ impl Tile {
     }
 }
 
+
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum Difficulty {
         Easy,
@@ -130,13 +133,13 @@ mod args {
     pub struct _FCargs {
         pub code: String,
         pub difficulty: map::Difficulty,
-        pub winnow: bool,
+        pub winnow: Vec<bool>,
     }
     
     #[macro_export]
     macro_rules! fcargs {
-        ($mand_1:expr, $mand_2:expr) => {
-            _FCargs {code: $mand_1.to_string(), difficulty: $mand_2, winnow: false}
+        ($mand_1:expr, $mand_2:expr) => {            
+            _FCargs {code: $mand_1.to_string(), difficulty: $mand_2, winnow: [false, false].to_vec()}
         };
         ($mand_1:expr, $mand_2:expr, $opt:expr) => {
             _FCargs {code: $mand_1.to_string(), difficulty: $mand_2, winnow: $opt}
@@ -144,14 +147,49 @@ mod args {
     }
 }
 
+/*
+
+pub struct node {
+    ID: u8,
+    edges: HashMap
+}
+
+#[derive(PartialEq, Eq, Hash)]
+impl node {    
+    pub calculate_all_distances(&mut self, features: Vec<Node>) {
+
+    }    
+}
+
+pub struct MapGraph {    
+    locations: HashMap,
+    graph: HashMap // HashMap of nodes
+}
+
+impl MapGraph {
+
+    // 1-1, using only bridges as interstitials
+    pub fn shortest_path(&mut self, map: Map, start: Node, end: Node) -> Result<Vec<(Node, length)>, Box<dyn Error>> {
+
+        
+    }
+    // Beginning to end
+    pub fn best_route(&mut self, start: Node, end: Node) -> Result<Vec<(Node, length)>, Box<dyn Error>> {
+
+    }
+    
+}*/
+
+
 pub use args::_FCargs;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Map {
+pub struct OverworldMap {
     width : usize,
     height : usize,
     tiles : Vec<Tile>,
-    dungeons : Vec<(Tile, (usize, usize))> // dungeons array is in order of MapIds below. First is Ruins, etc.
+    features: Vec<(Tile, (usize, usize))>, // features array is in order of MapIds below. First is Ruins, etc.    
+    graph: HashMap<Tile, HashMap<Tile, u8>>
 }
 
 #[repr(u8)]
@@ -163,23 +201,31 @@ enum MapIds {
     Graveyard = 0x2c,
     Volcano = 0x35,
     Sealed = 0x2d,
-    Shop = 0x3b
+    Shop = 0x3b    
 }
 
-impl Map {
-    /// Generate the overworld map from a given code.
+impl OverworldMap {
+    fn newMap(width : usize, height : usize, tiles : Vec<Tile>) -> OverworldMap {
+      let features = Vec::<(Tile, (usize, usize))>::new();
+      let graph = HashMap::<Tile, HashMap<Tile, u8>>::new();
+      return OverworldMap { width, height, tiles, features, graph };
+    }
+   /// Generate the overworld map from a given code.
     /// The winnow paramaeter allows you to stop generation based on the Map::winnow function for the instance
-    pub fn from_code(fc: &args::_FCargs) -> Result<Map, Box<dyn Error>>{
+    pub fn from_code(fc: &args::_FCargs) -> Result<OverworldMap, Box<dyn Error>>{
         let code = fc.code.as_str();
         #[cfg(debug_assertions)]
         println!("{}", code);
         let winnow = fc.winnow;
+        #[cfg(debug_assertions)]
+        println!("{}", code);
+        let winnow = &fc.winnow;
         let difficulty = fc.difficulty;
         let Some(mut rng) = VHRandom::from_code(code)
             else {return Err("Could not create RNG from Code!".into())};
         
         let map_id = rng.rand(5) + 1;
-        if winnow && (map_id != 4) {
+        if winnow[0] && (map_id != 4) {
             return Err("Map was not base map 4, cannot be good.".into());
         }
         let mut base_map = load_base_map(map_id)?;
@@ -228,7 +274,7 @@ impl Map {
             };
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Ruins as u8, rotation: 2, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Ruins as u8, rotation: 2, height: h }, (x, y)));
             // Place mansion
             let rand_rotation = (rng.rand_byte() & 3) as i8;
             if !map.place_feature(&[(MapIds::Mansion as u8, rand_rotation)], 1, 1, 1, 0x25, &mut feature_locations, &mut rng) {
@@ -238,25 +284,25 @@ impl Map {
             };
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Mansion as u8, rotation: rand_rotation, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Mansion as u8, rotation: rand_rotation, height: h }, (x, y)));
             // Place meadow variants
             if !map.place_feature(&[(0xa, 0)], 1, 1, 2, 9, &mut feature_locations, &mut rng) {
-                //println!("Failed to place meadows1 in seed {}!", rng.get_code());
+                //println!("Failed to place herb garden in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
             if !map.place_feature(&[(0xb, 0)], 1, 1, 2, 9, &mut feature_locations, &mut rng) {
-                //println!("Failed to place meadows2 in seed {}!", rng.get_code());
+                //println!("Failed to place antidote garden in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
             if !map.place_feature(&[(0xc, 0)], 1, 1, 2, 9, &mut feature_locations, &mut rng) {
-                //println!("Failed to place meadows3 in seed {}!", rng.get_code());
+                //println!("Failed to place poison garden in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
             if !map.place_feature(&[(0x38, 0)], 1, 1, 2, 9, &mut feature_locations, &mut rng) {
-                //println!("Failed to place meadows4 in seed {}!", rng.get_code());
+                //println!("Failed to place overworld elevator in seed {}!", rng.get_code());
                 //map.print_map();
                 continue
             };
@@ -268,7 +314,7 @@ impl Map {
             };
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Fairy as u8, rotation: 0, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Fairy as u8, rotation: 0, height: h }, (x, y)));
             // Place Trial Dungeon
             if !map.place_feature(&[(MapIds::Trial as u8, 0)], 1, 1, 1, 9, &mut feature_locations, &mut rng) {
                 //println!("Failed to place trial dungeon in seed {}!", rng.get_code());
@@ -278,7 +324,7 @@ impl Map {
             
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Trial as u8, rotation: 0, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Trial as u8, rotation: 0, height: h }, (x, y)));
             // Place Graveyard
             let rand_rotation = (rng.rand_byte() & 3) as i8;
             if !map.place_feature(&[(MapIds::Graveyard as u8, rand_rotation)], 1, 1, 1, 0x25, &mut feature_locations, &mut rng) {
@@ -288,7 +334,7 @@ impl Map {
             };
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Graveyard as u8, rotation: rand_rotation, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Graveyard as u8, rotation: rand_rotation, height: h }, (x, y)));
             // Place Volcano
             let rand_rotation = (rng.rand_byte() & 3) as i8;
             if !map.place_feature(&[(MapIds::Volcano as u8, rand_rotation)], 1, 1, 1, 5, &mut feature_locations, &mut rng) {
@@ -298,7 +344,7 @@ impl Map {
             };
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Volcano as u8, rotation: rand_rotation, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Volcano as u8, rotation: rand_rotation, height: h }, (x, y)));
             // Place Sealed Dungeon
             if !map.place_feature(&[(MapIds::Sealed as u8, -1)], 1, 1, 1, 0x1b, &mut feature_locations, &mut rng) {
                 //println!("Failed to place sealed dungeon in seed {}", rng.get_code());
@@ -308,14 +354,14 @@ impl Map {
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
             let r = map.tiles[x + y * map.width].rotation;
-            map.dungeons.push((Tile { id: MapIds::Sealed as u8, rotation: r, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Sealed as u8, rotation: r, height: h }, (x, y)));
 
             // Winnowing calculation can be completed
-            if winnow {
+            if winnow[1] {
                 if map.volcano_to_sealed_to_castle(base_rotation) > 9 {
                   return Err("Ending not close enough to perfect".into());
                 }
-            }
+            }            
             
             // Place Shop            
             let rand_rotation = (rng.rand_byte() & 3) as i8;
@@ -332,7 +378,7 @@ impl Map {
             };
             let (x,y) = feature_locations[feature_locations.len() - 1];
             let h = map.tiles[x + y * map.width].height;
-            map.dungeons.push((Tile { id: MapIds::Shop as u8, rotation: rand_rotation, height: h }, (x, y)));
+            map.features.push((Tile { id: MapIds::Shop as u8, rotation: rand_rotation, height: h }, (x, y)));
             
             let num_default_tiles = map.tiles.iter().filter(|&t| t.id == 1).count();
             let start_pos_idx1 = rng.rand(num_default_tiles as u32);
@@ -704,9 +750,9 @@ impl Map {
     }    
 
     pub fn volcano_to_sealed_to_castle(&self, rotation: u8) -> u8 {
-        let len = self.dungeons.len();
-        let (_, (vx, vy)) = self.dungeons[len-2]; // Volcano
-        let (_, (sx, sy)) = self.dungeons[len-1]; // Sealed
+        let len = self.features.len();
+        let (_, (vx, vy)) = self.features[len-2]; // Volcano
+        let (_, (sx, sy)) = self.features[len-1]; // Sealed
         let (tx, ty) = match rotation {
             0 => (13, 15), //(14 and 16 tiles from UL)
             1 => (15, 36), //(16 and 14 tiles from the LL)
@@ -725,7 +771,7 @@ impl Map {
 // memoize the base maps so we're not constantly doing file reads. It doesn't have much
 // actual effect, probably because windows does it anyways for you, but it makes me feel better.
 std::thread_local!{
-    static BASE_MAP_CACHE: RefCell<HashMap<u32, Map>> = RefCell::new(HashMap::new());
+    static BASE_MAP_CACHE: RefCell<HashMap<u32, OverworldMap>> = RefCell::new(HashMap::new());
 }
 
 pub fn expected_map_header() -> [u8; 24]{
@@ -755,7 +801,7 @@ fn map_validity_check(map_file: &Vec<u8>) -> Result<bool, Box<dyn Error>> {
     return Ok(true)
 }
 
-fn map_file_to_map(map_file: &Vec<u8>) -> Map {
+fn map_file_to_map(map_file: &Vec<u8>) -> OverworldMap {
     let mut tiles: Vec<Tile> = Vec::with_capacity(50*50);
         
     for i in 0..50*50 {
@@ -766,7 +812,7 @@ fn map_file_to_map(map_file: &Vec<u8>) -> Map {
         });
     }
 
-    return Map {width: 50, height: 50, tiles, dungeons: Vec::new()};
+    return OverworldMap::newMap(50, 50, tiles);
 }
 
 
@@ -776,14 +822,14 @@ fn map_file_to_map(map_file: &Vec<u8>) -> Map {
     Ok(map)
 }*/
 
-fn load_core_map_from_vec(map_file: &Vec<u8>) -> Result<Map, Box<dyn Error>> {
+fn load_core_map_from_vec(map_file: &Vec<u8>) -> Result<OverworldMap, Box<dyn Error>> {
     map_validity_check(&map_file)?;
     let map = map_file_to_map(&map_file);
     Ok(map)
 }
 
 
-pub fn load_base_map(n : u32) -> Result<Map, Box<dyn Error>> {
+pub fn load_base_map(n : u32) -> Result<OverworldMap, Box<dyn Error>> {
     if let Some(map) = BASE_MAP_CACHE.with(|cache_cell| {
         let cache = cache_cell.borrow();
         cache.get(&n).cloned()
@@ -811,7 +857,7 @@ mod tests {
     /// Loads an overworld map dumped directly from Mednafen
     /// Mednafen stores the RAM for the sega saturn in shorts instead of
     /// bytes, so we have to swap the endianness of every 2 bytes
-    fn load_mednafen_map(raw_file: &[u8]) -> Map {
+    fn load_mednafen_map(raw_file: &[u8]) -> OverworldMap {
         let mut tiles = Vec::with_capacity(50*50);
 
         // Do two tiles at a time to deal with the endianness swapping
@@ -832,7 +878,7 @@ mod tests {
             tiles.push(tile2);
         }
 
-        Map{width: 50, height: 50, tiles, dungeons: Vec::new()}
+        OverworldMap::new {width: 50, height: 50, tiles};
     }
 
     // Just a random seed I generated
@@ -841,7 +887,7 @@ mod tests {
         let dumped_map = include_bytes!("../tests/FNMCNTLGHF.bin");
 
         let mednafen_map = load_mednafen_map(dumped_map);
-        let mut generated_map = Map::from_code("FNMCNTLGHF").unwrap();
+        let mut generated_map = OverworldMap::from_code("FNMCNTLGHF").unwrap();
 
         // Replace the 0xff start tile with a default tile
         generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
@@ -856,7 +902,7 @@ mod tests {
         let dumped_map = include_bytes!("../tests/GBBBTSMMBB.bin");
 
         let mednafen_map = load_mednafen_map(dumped_map);
-        let mut generated_map = Map::from_code("GBBBTSMMBB").unwrap();
+        let mut generated_map = OverworldMap::from_code("GBBBTSMMBB").unwrap();
 
         // Replace the 0xff start tile with a default tile
         generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
@@ -870,7 +916,7 @@ mod tests {
         let dumped_map = include_bytes!("../tests/BBBBNDTLBB.bin");
 
         let mednafen_map = load_mednafen_map(dumped_map);
-        let mut generated_map = Map::from_code("BBBBNDTLBB").unwrap();
+        let mut generated_map = OverworldMap::from_code("BBBBNDTLBB").unwrap();
 
         // Replace the 0xff start tile with a default tile
         generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
@@ -884,7 +930,7 @@ mod tests {
         let dumped_map = include_bytes!("../tests/QBBDGRNQBB.bin");
 
         let mednafen_map = load_mednafen_map(dumped_map);
-        let mut generated_map = Map::from_code("QBBDGRNQBB").unwrap();
+        let mut generated_map = OverworldMap::from_code("QBBDGRNQBB").unwrap();
 
         // Replace the 0xff start tile with a default tile
         generated_map.tiles.iter_mut().find(|t| t.id == 0xff).unwrap().id = 1;
