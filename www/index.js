@@ -71,7 +71,7 @@ function set_binary_fields(string, container) {
 function set_canonical_field(bitelement, canonicalelement) {
   let bits = bitelement.textContent;
   console.log(bits);
-  let hexarray = parseInt(bits, 2).toString(16).toUpperCase().split("");
+  let hexarray = parseInt(bits, 2).toString(16).padStart(8,'0').toUpperCase().split("");
   console.log(hexarray);
   let seed = hexarray.map((x) => {
     let i = parseInt(x,16);
