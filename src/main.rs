@@ -5,10 +5,15 @@ use std::error::Error;
 use std::thread;
 use std::time::Instant;
 use map::_FCargs;
+use std::collections::hash_map::HashMap;
+use std::fs;
+use std::io;
+use std::ffi::OsString;
+use std::ffi::OsStr;
 
 #[macro_use(fcargs)]
 
-fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: &Vec<bool>, save: bool ) ->  Result<bool, Box<dyn Error>> {
+fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: &Vec<bool>, save: bool) ->  Result<bool, Box<dyn Error>> {
     
     let now = Instant::now();    
 
@@ -19,7 +24,7 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: &V
                 let m = match map::OverworldMap::from_code(&fcargs!(&code, difficulty, winnow.to_vec())) {
                     Ok(m) => Some(m),
                     Err(_) => None,
-                };
+                };                
                 if save && m.is_some() {
                     m.unwrap().save_map(&code).unwrap(); 
                 }
@@ -82,15 +87,16 @@ fn map_iteration(count: u32, start: u32, difficulty: map::Difficulty, winnow: &V
         return Ok(true);
 }
 
-fn main() {        
+fn main() {
     let mut difficulty:map::Difficulty = map::Difficulty::Easy;    
     loop {
         let mut line = String::new();
-        println!("Virtual Hydlide Map Generation Toolkit v2.3.0");
+        println!("Virtual Hydlide Map Generation Toolkit v2.4.0");
         println!("1 to set the difficulty, currently {}", map::difficulty_text(&difficulty));
         println!("2 for generating and printing a specific seed");    
         println!("3 to generate ascii for all 5 base maps");
         println!("4 to generate a given number of seeds, possibly winnowing the results out and saving only the remainder.");
+        println!("5 to return the maps in /genmaps in shortest path order");
         println!("Anything else to quit or crash.");
         let _bytecount = std::io::stdin().read_line(&mut line).unwrap();
         println!("{}",line);
@@ -137,7 +143,7 @@ fn main() {
         }
         else if choice == 4 {
             let mut save = false;
-            let mut winnow = Vec::from([false, false]);
+            let mut winnow = Vec::from([false, false, false]);
             println!("Enter what number you want to start on");
             let mut line_start = String::new();
             let mut _count = std::io::stdin().read_line(&mut line_start).unwrap();        
@@ -146,12 +152,24 @@ fn main() {
             let mut line2 = String::new();
             _count = std::io::stdin().read_line(&mut line2).unwrap();        
             let iterations = line2.trim_end().parse::<u32>().unwrap();
-            println!("Enter Y to winnow (winnowing criteria: perfect V->S->C walk)");
+            println!("Do you want to winnow based on...");
+            println!("... not being Map 4? (Y/N)");
             let mut line3 = String::new();
-            _count = std::io::stdin().read_line(&mut line3).unwrap();        
+            _count = std::io::stdin().read_line(&mut line3).unwrap();                    
             if line3.trim_end() == "Y" {
-                winnow[0] = false;
-                winnow[1] = false;               
+                winnow[0] = true;                
+            }
+            println!("... not having a shortest possible V-S-C? (Y/N)");
+            line3 = String::new();
+            _count = std::io::stdin().read_line(&mut line3).unwrap();                    
+            if line3.trim_end() == "Y" {                
+                winnow[1] = true;               
+            }
+            println!("... not having a short overall path? (Y/N)");
+            line3 = String::new();
+            _count = std::io::stdin().read_line(&mut line3).unwrap();                    
+            if line3.trim_end() == "Y" {                
+                winnow[2] = true;               
             }
             println!("Enter Y to save (9K per file, do the math)");
             let mut line4 = String::new();
@@ -160,6 +178,38 @@ fn main() {
                 save = true;
             }
             map_iteration(iterations, start, difficulty, &winnow, save).unwrap();
+        }
+        else if choice == 5 {
+            // shortest_path dictionary empty
+            let mut path_lengths = HashMap::new();
+            for mapfile in fs::read_dir("./genmaps").expect("read dir call failed") {
+                if let Ok(mapfile) = mapfile {
+                    let mappath: std::path::PathBuf = mapfile.path();
+                    if mappath.is_dir() {
+                        continue;
+                    }
+                    //println!("{:?}", mappath.display());
+                    let e = mappath.extension().unwrap();                                  
+                    if e == "BIN" {
+                        let stem = mappath.file_stem().unwrap();
+                        let n: OsString = stem.to_os_string();
+                        //println!("{:?}", n);
+                        let newmap = map::load_map(&n).unwrap();
+                        let (first_half, last_half) = newmap.calculate_shortest_distance();                        
+                        let shortest_distance = first_half + last_half;
+                        path_lengths.entry(shortest_distance)
+                          .and_modify(|e: &mut Vec<OsString>| { e.push(n.clone()) })
+                          .or_insert(vec![n.clone()]);
+                    }                
+                }
+            }
+            let mut lengths: Vec<_> = path_lengths.keys().collect();
+            lengths.sort();
+            lengths.reverse();
+            for l in lengths {
+                println!("{}", l);
+                println!("{:?}", path_lengths[l]);
+            }        
         }
         else {
             println!("You didn't pick one of the options, so we're done! Congratulations.");
